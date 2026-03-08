@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Q&A — Oracle AI Agent Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0D0F12;
+      --surface: #161921;
+      --surface2: #1C2028;
+      --border: #2A2E38;
+      --border-hover: #3D424F;
+      --text: #E8E6E1;
+      --text-muted: #8B8D95;
+      --accent: #D4622B;
+      --accent-glow: #D4622B33;
+      --oracle-red: #C74634;
+      --success: #4ADE80;
+      --success-dim: #4ADE8018;
+      --user-bubble: #D4622B;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header bar ── */
+    .header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .back-btn:hover { color: var(--text); border-color: var(--border); background: var(--surface2); }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .header-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #D4622B20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .header-title h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 18px;
+      font-weight: 400;
+    }
+
+    /* ── Main layout ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 16px;
+      overflow: hidden;
+    }
+
+    /* ── Upload zone ── */
+    .upload-area {
+      padding: 20px 0 0;
+      flex-shrink: 0;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+    .upload-zone.has-doc {
+      padding: 12px 20px;
+    }
+    .upload-zone .icon { font-size: 36px; opacity: 0.3; margin-bottom: 8px; }
+    .upload-zone .label {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 17px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .upload-zone .hint { font-size: 12px; color: var(--text-muted); }
+
+    .doc-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--success-dim);
+      border: 1px solid #4ADE8025;
+      border-radius: 10px;
+      margin-top: 12px;
+    }
+    .doc-badge .doc-icon { color: var(--success); font-size: 18px; }
+    .doc-badge .doc-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .doc-badge .doc-info {
+      font-size: 11px;
+      color: var(--success);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── Chat area ── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 0;
+    }
+    .chat-area::-webkit-scrollbar { width: 5px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Suggestions */
+    .suggestions {
+      text-align: center;
+      padding: 40px 0;
+    }
+    .suggestions .hint {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      font-weight: 300;
+    }
+    .suggestion-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    .suggestion-chip {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .suggestion-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--surface2);
+    }
+
+    /* Messages */
+    .message {
+      display: flex;
+      margin-bottom: 14px;
+    }
+    .message.user { justify-content: flex-end; }
+    .message.assistant { justify-content: flex-start; }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .message-bubble {
+      background: var(--user-bubble);
+      color: #fff;
+      border-radius: 16px 16px 4px 16px;
+    }
+
+    .message.assistant .message-bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px 16px 16px 4px;
+      color: var(--text);
+    }
+
+    .message.assistant .msg-label {
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    /* Typing indicator */
+    .typing {
+      display: flex;
+      gap: 5px;
+      padding: 12px 16px;
+      align-items: center;
+    }
+    .typing-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: dotPulse 1.2s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+    /* ── Input bar ── */
+    .input-bar {
+      padding: 12px 0 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 4px 4px 16px;
+      transition: border-color 0.2s;
+    }
+    .input-wrap:focus-within { border-color: var(--accent); }
+
+    .input-wrap input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      padding: 10px 0;
+    }
+    .input-wrap input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .send-btn.ready { background: var(--accent); color: #fff; }
+    .send-btn.idle { background: var(--surface2); color: var(--text-muted); cursor: default; }
+
+    .send-btn svg { width: 18px; height: 18px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 1s linear infinite; }
+
+    /* Hidden file input */
+    #fileInput { display: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .main { padding: 0 12px; }
+      .message-bubble { max-width: 88%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="back-btn">← Hub</a>
+  <div class="header-title">
+    <div class="header-icon">📄</div>
+    <h1>Document Q&A Agent</h1>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Upload -->
+  <div class="upload-area">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📄</div>
+      <div class="label">Drop a document here or click to browse</div>
+      <div class="hint">PDF, TXT, MD, CSV, JSON, XML, HTML</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.txt,.md,.csv,.json,.log,.xml,.html" />
+    <div id="docBadge" style="display:none"></div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area" id="chatArea"></div>
+
+  <!-- Input -->
+  <div class="input-bar" id="inputBar" style="display:none">
+    <div class="input-wrap">
+      <input type="text" id="questionInput" placeholder="Ask a question about your document..." />
+      <button class="send-btn idle" id="sendBtn" onclick="askQuestion()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are a Document Q&A Agent — an AI assistant specialized in answering questions about uploaded documents.
+
+Your behavior:
+- Answer questions ONLY based on the document content provided
+- If the answer isn't in the document, say so clearly
+- Quote relevant sections when possible
+- Be concise but thorough
+- If asked to summarize, provide a structured summary
+- When referencing specific parts, indicate where in the document you found the information`;
+
+const SUGGESTIONS = [
+  "Summarize this document",
+  "What are the key points?",
+  "List any action items",
+  "What technical terms are used?",
+];
+
+let currentDoc = null;
+let messages = [];
+let loading = false;
+
+// ── DOM refs ──
+const uploadZone = document.getElementById("uploadZone");
+const fileInput = document.getElementById("fileInput");
+const docBadge = document.getElementById("docBadge");
+const chatArea = document.getElementById("chatArea");
+const inputBar = document.getElementById("inputBar");
+const questionInput = document.getElementById("questionInput");
+const sendBtn = document.getElementById("sendBtn");
+
+// ── File handling ──
+fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+
+uploadZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  uploadZone.classList.add("drag-over");
+});
+uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag-over"));
+uploadZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove("drag-over");
+  handleFile(e.dataTransfer.files[0]);
+});
+
+async function handleFile(file) {
+  if (!file) return;
+  const name = file.name;
+  const ext = name.split(".").pop().toLowerCase();
+
+  if (["txt", "md", "csv", "json", "log", "xml", "html"].includes(ext)) {
+    const text = await file.text();
+    loadDoc({ name, type: "text", content: text });
+  } else if (ext === "pdf") {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(",")[1];
+      loadDoc({ name, type: "pdf", content: base64 });
+    };
+    reader.readAsDataURL(file);
+  } else {
+    alert("Supported: PDF, TXT, MD, CSV, JSON, XML, HTML, LOG");
+  }
+}
+
+function loadDoc(doc) {
+  currentDoc = doc;
+  messages = [];
+
+  // Shrink upload zone
+  uploadZone.classList.add("has-doc");
+  uploadZone.innerHTML = '<div class="hint">Drop or click to load a different document</div>';
+
+  // Show badge
+  const info = doc.type === "pdf" ? "PDF loaded" : `${doc.content.length.toLocaleString()} chars`;
+  docBadge.style.display = "flex";
+  docBadge.innerHTML = `
+    <span class="doc-icon">✓</span>
+    <span class="doc-name">${doc.name}</span>
+    <span class="doc-info">${info} · Ready</span>
+  `;
+
+  // Show suggestions
+  renderSuggestions();
+  inputBar.style.display = "block";
+  questionInput.focus();
+}
+
+function renderSuggestions() {
+  chatArea.innerHTML = `
+    <div class="suggestions">
+      <div class="hint">Try one of these to get started:</div>
+      <div class="suggestion-chips">
+        ${SUGGESTIONS.map(s => `<button class="suggestion-chip" onclick="useSuggestion('${s}')">${s}</button>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function useSuggestion(text) {
+  questionInput.value = text;
+  questionInput.focus();
+  updateSendBtn();
+}
+
+// ── Input handling ──
+questionInput.addEventListener("input", updateSendBtn);
+questionInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) askQuestion();
+});
+
+function updateSendBtn() {
+  const hasText = questionInput.value.trim().length > 0;
+  sendBtn.className = "send-btn " + (hasText && !loading ? "ready" : "idle");
+}
+
+// ── Chat rendering ──
+function appendMessage(role, content) {
+  messages.push({ role, content });
+  const div = document.createElement("div");
+  div.className = `message ${role}`;
+
+  let inner = "";
+  if (role === "assistant") {
+    inner = `<div class="msg-label">Agent</div>${escapeHtml(content)}`;
+  } else {
+    inner = escapeHtml(content);
+  }
+
+  div.innerHTML = `<div class="message-bubble">${inner}</div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement("div");
+  div.className = "typing";
+  div.id = "typingIndicator";
+  div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById("typingIndicator");
+  if (el) el.remove();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ── Ask question ──
+async function askQuestion() {
+  const q = questionInput.value.trim();
+  if (!q || !currentDoc || loading) return;
+
+  // Clear suggestions on first question
+  const sug = chatArea.querySelector(".suggestions");
+  if (sug) sug.remove();
+
+  questionInput.value = "";
+  updateSendBtn();
+  loading = true;
+  sendBtn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+  sendBtn.className = "send-btn idle";
+
+  appendMessage("user", q);
+  showTyping();
+
+  try {
+    // Build user content with document
+    const userContent = [];
+
+    if (currentDoc.type === "pdf") {
+      userContent.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: currentDoc.content },
+      });
+    } else {
+      userContent.push({
+        type: "text",
+        text: `<document filename="${currentDoc.name}">\n${currentDoc.content}\n</document>`,
+      });
+    }
+    userContent.push({ type: "text", text: q });
+
+    // Build API messages with history
+    const apiMessages = [];
+    for (const msg of messages.slice(0, -1)) { // exclude the one we just added
+      if (msg.role === "user") {
+        apiMessages.push({ role: "user", content: msg.content });
+      } else {
+        apiMessages.push({ role: "assistant", content: msg.content });
+      }
+    }
+    apiMessages.push({ role: "user", content: userContent });
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: apiMessages,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error?.message || data.error || "API error");
+    }
+
+    const answer = data.content
+      ?.filter(b => b.type === "text")
+      .map(b => b.text)
+      .join("\n") || "I couldn't generate a response.";
+
+    hideTyping();
+    appendMessage("assistant", answer);
+  } catch (err) {
+    hideTyping();
+    appendMessage("assistant", `Error: ${err.message}. Please try again.`);
+  } finally {
+    loading = false;
+    sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+    updateSendBtn();
+    questionInput.focus();
+  }
+}
+</script>
+
+</body>
+</html>
